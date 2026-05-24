@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bigburger Savdo & Xomashyo Hisobi</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+
+<body>
+  <div class="container">
+
+    <header class="topbar">
+      <h1>🍔 Bigburger Hisob-Kitob</h1>
+      <button class="btn-warn" onclick="openExpenseModal()">＋ Xarajat</button>
+    </header>
+
+    <div id="expense-modal" class="modal">
+      <div class="modal-box">
+        <h3>Xarajat / Xomashyo kirimi</h3>
+        <input type="number" id="exp-amount" placeholder="Summa (so'm)">
+        <input type="text" id="exp-reason" placeholder="Masalan: 50 ta Burger noni">
+        <div class="row-gap">
+          <button class="btn-success" onclick="saveExpense()">Saqlash</button>
+          <button class="btn-grey" onclick="closeExpenseModal()">Yopish</button>
+        </div>
+        <p class="hint">💡 Maslahat: nomda son yozing ("50 ta non") — keyin xomashyo balansiga avtomatik tushadi.</p>
+      </div>
+    </div>
+
+    <input type="text" id="search-input" oninput="filterMenu()" placeholder="🔍 Mahsulot qidirish...">
+
+    <div class="field">
+      <label>Stol / Joy:</label>
+      <select id="table-number" onchange="switchTable()">
+        <option value="1-stol">1-stol</option>
+        <option value="2-stol">2-stol</option>
+        <option value="3-stol">3-stol</option>
+        <option value="4-stol">4-stol</option>
+        <option value="5-stol">5-stol</option>
+        <option value="Olib ketish">Olib ketish</option>
+      </select>
+    </div>
+
+    <div class="grid-main">
+      <section class="panel">
+        <div id="category-tabs" class="category-tabs"></div>
+        <div id="menu-items"></div>
+      </section>
+
+      <aside class="panel cart-panel">
+        <h3>🧺 Savat</h3>
+        <ul id="cart-list"></ul>
+        <div class="total-box">Jami: <span id="total-sum">0</span> so'm</div>
+        <label>To'lov turi:</label>
+        <select id="payment-method">
+          <option value="naqd">💵 Naqd</option>
+          <option value="karta">💳 Karta</option>
+        </select>
+        <button class="btn-success big" onclick="completeSale()">✅ Sotish</button>
+        <button class="btn-grey" onclick="clearCart()">Savatni tozalash</button>
+      </aside>
+    </div>
+
+    <section class="admin">
+      <button class="btn-dark" onclick="toggleAdmin()">🔐 Admin Paneli</button>
+
+      <div id="admin-data" class="hidden">
+        <div class="filters">
+          <button onclick="showStats('today')" class="cat-btn active">Bugun</button>
+          <button onclick="showStats('week')" class="cat-btn">Hafta</button>
+          <button onclick="showStats('month')" class="cat-btn">Oy</button>
+          <button onclick="showStats('all')" class="cat-btn">Hammasi</button>
+        </div>
+
+        <div id="stats-output"></div>
+
+        <div class="ingredient-block">
+          <h3>📦 Xomashyo Balansi — dinamik hisob-kitob</h3>
+          <p class="hint">Tizim avtomatik tarzda: <b>(Kelgan - Qoldi) * Birlik narxi</b> formulasi bo'yicha hisoblaydi.
+          </p>
+
+          <table class="ing-table">
+            <thead>
+              <tr>
+                <th>Xomashyo nomi</th>
+                <th>Kelgan (Soni)</th>
+                <th>Qoldi (Soni)</th>
+                <th>Birlik narxi (so'm)</th>
+                <th>O'chirish</th>
+              </tr>
+            </thead>
+            <tbody id="ing-rows">
+            </tbody>
+          </table>
+
+          <div style="margin-top: 15px; display: flex; gap: 10px;">
+            <button class="btn-info" onclick="addIngredientRow()">＋ Xomashyo qo'shish</button>
+            <button class="btn-primary" onclick="calcIngredients()">🧮 Sotilganni hisoblash</button>
+          </div>
+
+          <div id="ingredient-result-box" class="ing-result hidden"
+            style="margin-top: 15px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1;">
+          </div>
+        </div>
+
+        <hr>
+        <button class="btn-cancel" onclick="clearHistory()">🗑️ Butun tarixni o'chirish</button>
+      </div>
+    </section>
+
+  </div>
+  <script src="script.js"></script>
+</body>
+
+</html>

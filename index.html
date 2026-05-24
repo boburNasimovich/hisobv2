@@ -14,9 +14,44 @@
   <div class="container">
 
     <header class="topbar">
+    <div class="logo-area">
       <h1>🍔 Bigburger Hisob-Kitob</h1>
+    </div>
+    <div>
+      <button class="btn-warn" onclick="toggleHelpModal()"> Yordam</button>
       <button class="btn-warn" onclick="openExpenseModal()">＋ Xarajat</button>
-    </header>
+    </div>
+  </header>
+
+  <div class="help-modal" id="help-content-modal" style="display: none;">
+    <div class="help-modal-box">
+      <div class="help-header">
+        <h4>📖 Tizimdan foydalanish bo'yicha qo'llanma</h4>
+        <button class="close-help-btn" onclick="toggleHelpModal()">✖</button>
+      </div>
+      <div class="help-body">
+        <h5>1. Savdo va Buyurtma olish:</h5>
+        <ul>
+          <li>Stolni tanlang, menyudan taomlarni bosing. Taomlar savatga qo'shiladi.</li>
+          <li>To'lov turini (Naqd/Karta) tanlab, <b>"Sotuvni yakunlash"</b> tugmasini bosing.</li>
+        </ul>
+
+        <h5>2. 📦 Real-time Ombor (Sklad) tizimi:</h5>
+        <ul>
+          <li><b>Bazada bor (Tizimda):</b> Hozir omborda real qolgan mahsulot soni. Sahifa yangilansa ham o'chib ketmaydi.</li>
+          <li><b>Yangi keldi (Kirim +):</b> Masalan, bugun 200 ta non kelgan bo'lsa, shu ustunga <code>200</code> yozib, pastdagi sariq <b>"Kelganlarni Omborga Qo'shish"</b> tugmasini bosing. Tizim uni eskisiga qo'shib qo'yadi (300 + 200 = 500).</li>
+          <li><b>Kun oxiri (Qoldi):</b> Kechasi ish tugagach, sanab ko'rib qo'lingizda qolgan real sonni yozing (masalan, <code>50</code>) va ko'k <b>"Kunlik Sotilganni Hisoblash"</b> tugmasini bosing.</li>
+          <li>Tizim avtomatik <code>500 - 50 = 450 ta sotildi</code> deb hisoblaydi va yashil tugma orqali pulini bugungi savdoga qo'shib, ombor balansini yangi qoldiqqa tenglaydi.</li>
+        </ul>
+
+        <h5>3. Admin panel va Xarajatlar:</h5>
+        <ul>
+          <li>Parol: <code>volk1111</code>. Admin panelda kunlik, haftalik, oylik tushum, xarajat va sof foyda hisoblanadi.</li>
+          <li>Bozorlik yoki boshqa chiqimlarni tepadagi orange rangli <b>"＋ Xarajat"</b> tugmasi orqali kiriting.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
 
     <div id="expense-modal" class="modal">
       <div class="modal-box">
@@ -79,31 +114,46 @@
         <div id="stats-output"></div>
 
         <div class="ingredient-block">
-          <h3>📦 Xomashyo Balansi — dinamik hisob-kitob</h3>
-          <p class="hint">Tizim avtomatik tarzda: <b>(Kelgan - Qoldi) * Birlik narxi</b> formulasi bo'yicha hisoblaydi.
-          </p>
+          <h3>📦 Dinamik Ombor va Xomashyo Balansi</h3>
+          <p class="hint">Xomashyolar bazada saqlanadi. Yangi kelgan yukni "Kirim (+)" ustuniga yozib, omborga
+            qo'shishingiz mumkin.</p>
 
           <table class="ing-table">
             <thead>
               <tr>
                 <th>Xomashyo nomi</th>
-                <th>Kelgan (Soni)</th>
-                <th>Qoldi (Soni)</th>
+                <th>Omborda bor (Tizimda)</th>
+                <th>Yangi keldi (Kirim +)</th>
+                <th>Kun oxiri (Qoldi)</th>
                 <th>Birlik narxi (so'm)</th>
-                <th>O'chirish</th>
+                <th>Boshqaruv</th>
               </tr>
             </thead>
             <tbody id="ing-rows">
             </tbody>
           </table>
 
-          <div style="margin-top: 15px; display: flex; gap: 10px;">
-            <button class="btn-info" onclick="addIngredientRow()">＋ Xomashyo qo'shish</button>
-            <button class="btn-primary" onclick="calcIngredients()">🧮 Sotilganni hisoblash</button>
+          <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn-info" onclick="openNewIngredientModal()">＋ Yangi xomashyo turi</button>
+            <button class="btn-warn" onclick="saveIncomingIngredients()">📥 Kelganlarni Omborga Qo'shish</button>
+            <button class="btn-primary" onclick="calcIngredients()">🧮 Kunlik Sotilganni Hisoblash</button>
           </div>
 
           <div id="ingredient-result-box" class="ing-result hidden"
             style="margin-top: 15px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1;">
+          </div>
+        </div>
+
+        <div id="new-ing-modal" class="modal" style="display: none;">
+          <div class="modal-box">
+            <h3>Yangi xomashyo turi qo'shish</h3>
+            <input type="text" id="new-ing-name" placeholder="Xomashyo nomi (masalan: Go'sht kg, Kola 1.5L)">
+            <input type="number" id="new-ing-stock" placeholder="Hozir omborda qancha bor? (Soni/Miqdori)">
+            <input type="number" id="new-ing-price" placeholder="Birlik narxi (Sotiladigan o'rtacha qiymati)">
+            <div class="row-gap" style="margin-top: 15px;">
+              <button class="btn-success" onclick="createNewIngredientType()">Qo'shish</button>
+              <button class="btn-grey" onclick="closeNewIngredientModal()">Yopish</button>
+            </div>
           </div>
         </div>
 

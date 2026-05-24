@@ -71,6 +71,11 @@ let orders = {
 let activeTable = "1-stol";
 const adminPassword = "volk1111";
 
+// Ombor tizimi uchun global o'zgaruvchilar
+let localIngredients = {};
+let calculatedEmergencyRevenue = 0;
+let calculatedStockUpdates = {};
+
 const menuDiv = document.getElementById('menu-items');
 const categoryDiv = document.getElementById('category-tabs');
 
@@ -125,12 +130,29 @@ function renderMenu(category = "all") {
     });
 }
 
+// Qidiruv tizimi
+function filterMenu() {
+    let text = document.getElementById('search-input').value.toLowerCase();
+    let allItems = [];
+    for (let cat in menuData) allItems = allItems.concat(menuData[cat]);
+    let filtered = allItems.filter(item => item.name.toLowerCase().includes(text));
+    menuDiv.innerHTML = "";
+    filtered.forEach(item => {
+        let btn = document.createElement('button');
+        btn.className = 'menu-btn';
+        btn.innerText = `${item.name}\n${item.price.toLocaleString()} so'm`;
+        btn.onclick = () => addToOrder(item);
+        menuDiv.appendChild(btn);
+    });
+}
+
 function addToOrder(item) {
     const orderItem = { ...item, orderId: Date.now() + Math.random() };
     orders[activeTable].push(orderItem); 
     updateTotal();
 }
 
+// Savatdan o'chirish
 function removeFromOrder(id) {
     orders[activeTable] = orders[activeTable].filter(item => item.orderId !== id);
     updateTotal();
@@ -216,7 +238,6 @@ function showStats(filter = 'today', showAll = false) {
     const statsOutput = document.getElementById('stats-output');
     if (!statsOutput) return;
 
-    // Klas to'g'rilandi: .filters barcha tugmalarni topadi
     const filterButtons = document.querySelectorAll('.filters button');
     filterButtons.forEach(btn => {
         btn.classList.remove('active');
@@ -303,14 +324,13 @@ function renderStatsUI(filteredSales, filteredExpenses, filter, showAll) {
         </div>
     `;
 
-    // 2. XARAJAТLAR QISMI (Yangi limit va tugma mantig'i qo'shildi)
+    // 2. XARAJAТLAR QISMI (Faqat oxirgi 10 tasi va ko'rish tugmasi)
     output += `<h4 style="margin-bottom:10px;">Xarajatlar tafsiloti:</h4>`;
     if (filteredExpenses.length === 0) {
         output += `<p style="color:#888; font-size:12px;">Rasxodlar yo'q.</p>`;
     } else {
         let displayExpenses = filteredExpenses.slice().reverse();
         let expLimit = 10;
-        // Agar showAll true bo'lsa hammasini, aks holda faqat dastlabki 10 tasini oladi
         let expListToRender = (!showAll && displayExpenses.length > expLimit) ? displayExpenses.slice(0, expLimit) : displayExpenses;
 
         expListToRender.forEach(e => {
@@ -327,14 +347,13 @@ function renderStatsUI(filteredSales, filteredExpenses, filter, showAll) {
                 </div>`;
         });
 
-        // Agar xarajatlar 10 tadan ko'p bo'lsa, "Hammasini ko'rish" tugmasi chiqadi
         if (filteredExpenses.length > expLimit) {
             let btnText = showAll ? "Xarajatlarni qisqartirish ↑" : `Barcha xarajatlarni ko'rsatish (${filteredExpenses.length} ta) ↓`;
             output += `<button onclick="showStats('${filter}', ${!showAll})" style="width:100%; padding:10px; margin-top:5px; margin-bottom:15px; cursor:pointer; background:#fff0f0; border:1px solid #ffe3e3; color:#dc3545; border-radius:8px; font-weight:500;">${btnText}</button>`;
         }
     }
 
-    // 3. SAVDOLAR QISMI (Bu qism ham showAll parametridan foydalanadi)
+    // 3. SAVDOLAR QISMI
     output += `<h4 style="margin-top:20px;">Savdolar tafsiloti:</h4>`;
     let displaySales = filteredSales.slice().reverse();
     let salesLimit = 10;
@@ -357,7 +376,6 @@ function renderStatsUI(filteredSales, filteredExpenses, filter, showAll) {
             </div>`;
     });
 
-    // Savdolar uchun "Barchasini ko'rsatish" tugmasi
     if (filteredSales.length > salesLimit) {
         let btnText = showAll ? "Savdolarni qisqartirish ↑" : `Barcha savdolarni ko'rsatish (${filteredSales.length} ta) ↓`;
         output += `<button onclick="showStats('${filter}', ${!showAll})" style="width:100%; padding:10px; margin-top:5px; cursor:pointer; background:#e6f4ff; border:1px solid #bae7ff; color:#0050b3; border-radius:8px; font-weight:500;">${btnText}</button>`;
@@ -366,7 +384,6 @@ function renderStatsUI(filteredSales, filteredExpenses, filter, showAll) {
     statsOutput.innerHTML = output;
 }
 
-// Dublikat to'g'rilandi: bitta funksiya qoldi
 function deleteSale(id) {
     if (confirm("Ushbu savdo tarixdan o'chirilsinmi?")) {
         database.ref('sales/' + id).remove().then(() => showStats());
@@ -388,21 +405,6 @@ function clearHistory() {
             })
             .catch(err => alert("Xato: " + err.message));
     }
-}
-
-function filterMenu() {
-    let text = document.getElementById('search-input').value.toLowerCase();
-    let allItems = [];
-    for (let cat in menuData) allItems = allItems.concat(menuData[cat]);
-    let filtered = allItems.filter(item => item.name.toLowerCase().includes(text));
-    menuDiv.innerHTML = "";
-    filtered.forEach(item => {
-        let btn = document.createElement('button');
-        btn.className = 'menu-btn';
-        btn.innerText = `${item.name}\n${item.price.toLocaleString()} so'm`;
-        btn.onclick = () => addToOrder(item);
-        menuDiv.appendChild(btn);
-    });
 }
 
 function openExpenseModal() {
@@ -433,154 +435,122 @@ function saveExpense() {
     }).catch(err => alert("Xato: " + err.message));
 }
 
-// XOMASHYO HISOB-KITOBI (Interfeys bilan to'liq bog'landi)
-let calculatedEmergencyRevenue = 0;
 
-function autoCalculateIngredients() {
-    const inLavash = parseFloat(document.getElementById('ing-in-lavash').value) || 0;
-    const outLavash = parseFloat(document.getElementById('ing-out-lavash').value) || 0;
+// ==========================================
+// 🔥 YANGARETTY REALTIME OMBOR TIZIMI MANTIG'I
+// ==========================================
 
-    const inBurger = parseFloat(document.getElementById('ing-in-burger').value) || 0;
-    const outBurger = parseFloat(document.getElementById('ing-out-burger').value) || 0;
-
-    const inHotdog = parseFloat(document.getElementById('ing-in-hotdog').value) || 0;
-    const outHotdog = parseFloat(document.getElementById('ing-out-hotdog').value) || 0;
-
-    const inSasiska = parseFloat(document.getElementById('ing-in-sasiska').value) || 0;
-    const outSasiska = parseFloat(document.getElementById('ing-out-sasiska').value) || 0;
-
-    const PRICE_LAVASH = 32000;  
-    const PRICE_BURGER = 20000;  
-    const PRICE_HOTDOG = 15000;  
-
-    let soldLavash = Math.max(0, inLavash - outLavash);
-    let soldBurger = Math.max(0, inBurger - outBurger);
-    
-    let soldHotdogByBread = Math.max(0, inHotdog - outHotdog);
-    let soldHotdogBySasiska = Math.max(0, inSasiska - outSasiska);
-    let soldHotdog = Math.max(soldHotdogByBread, soldHotdogBySasiska);
-
-    let revLavash = soldLavash * PRICE_LAVASH;
-    let revBurger = soldBurger * PRICE_BURGER;
-    let revHotdog = soldHotdog * PRICE_HOTDOG;
-
-    calculatedEmergencyRevenue = revLavash + revBurger + revHotdog;
-
-    const resultBox = document.getElementById('ingredient-result-box');
-    resultBox.classList.remove('hidden');
-    resultBox.style.display = 'block';
-
-    // LatEx strelkasi oddiy strelkaga almashtirildi
-    resultBox.innerHTML = `
-        <h4 style="margin: 0 0 10px 0; color: #2b6cb0;">📊 Hisob-kitob natijasi:</h4>
-        <div style="font-size: 14px; line-height: 1.6; color: #2d3748;">
-            🫓 <b>Sotilgan Lavash:</b> ${soldLavash} ta ➔ <span style="color:#2f855a; font-weight:bold;">+${revLavash.toLocaleString()} so'm</span><br>
-            🍞 <b>Sotilgan Burger:</b> ${soldBurger} ta ➔ <span style="color:#2f855a; font-weight:bold;">+${revBurger.toLocaleString()} so'm</span><br>
-            🌭 <b>Sotilgan Hotdog:</b> ${soldHotdog} ta ➔ <span style="color:#2f855a; font-weight:bold;">+${revHotdog.toLocaleString()} so'm</span>
-            <hr style="margin: 10px 0; border: 0; border-top: 1px solid #e2e8f0;">
-            <div style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">
-                💰 Jami tiklanadigan tushum: <span style="color: #c53030;">${calculatedEmergencyRevenue.toLocaleString()} so'm</span>
-            </div>
-            ${calculatedEmergencyRevenue > 0 ? `
-                <button onclick="saveEmergencyRevenueToFirebase()" style="background: #48bb78; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; width: 100%; cursor: pointer;">
-                    📥 Ushbu pulni Bugungi Savdoga qo'shish
-                </button>
-            ` : '<p style="color:#718096; font-size:12px; margin:0;">Kamomad yoki sotuv aniqlanmadi.</p>'}
-        </div>
-    `;
+// 1. Firebase'dan xomashyolarni real-time eshitish
+function listenIngredients() {
+    database.ref('ingredients').on('value', (snapshot) => {
+        localIngredients = snapshot.val() || {};
+        renderIngredientsTable();
+    });
 }
 
-function saveEmergencyRevenueToFirebase() {
-    if (calculatedEmergencyRevenue <= 0) return;
-
-    if (confirm(`Rostdan ham ${calculatedEmergencyRevenue.toLocaleString()} so'm pulni bugungi umumiy savdoga qo'shmoqchimisiz?`)) {
-        let saleData = {
-            time: new Date().toISOString(),
-            items: [{ name: "Xomashyo balansi orqali tiklangan savdo", price: calculatedEmergencyRevenue }],
-            total: calculatedEmergencyRevenue,
-            tableName: "Xomashyo hisobi", 
-            paymentMethod: "naqd" 
-        };
-
-        database.ref('sales').push(saleData).then(() => {
-            alert("Pul muvaffaqiyatli qo'shildi va Sof Foyda qayta hisoblandi! ✅");
-            document.getElementById('ingredient-result-box').style.display = 'none';
-            
-            document.getElementById('ing-in-lavash').value = 0;
-            document.getElementById('ing-out-lavash').value = 0;
-            document.getElementById('ing-in-burger').value = 0;
-            document.getElementById('ing-out-burger').value = 0;
-            document.getElementById('ing-in-hotdog').value = 0;
-            document.getElementById('ing-out-hotdog').value = 0;
-            document.getElementById('ing-in-sasiska').value = 0;
-            document.getElementById('ing-out-sasiska').value = 0;
-
-            showStats('today');
-        }).catch(err => alert("Xato yuz berdi: " + err.message));
-    }
-}
-
-// Boshlang'ich yuklash
-renderCategories();
-renderMenu("all");
-
-// 1. Sahifa yuklanganda yoki har safar tugma bosilganda yangi qator qo'shish funksiyasi
-function addIngredientRow(name = "", incoming = 0, remaining = 0, price = 0) {
+// 2. HTML Jadval ichini render qilish
+function renderIngredientsTable() {
     const tbody = document.getElementById('ing-rows');
     if (!tbody) return;
+    tbody.innerHTML = "";
 
-    const rowId = 'ing-row-' + Date.now() + Math.random().toString(36).substr(2, 5);
-    const tr = document.createElement('tr');
-    tr.id = rowId;
-
-    tr.innerHTML = `
-        <td><input type="text" class="ing-name" placeholder="Masalan: Lavash xmiri" value="${name}" style="width:100%;"></td>
-        <td><input type="number" class="ing-in" placeholder="0" value="${incoming}" style="width:100%;"></td>
-        <td><input type="number" class="ing-out" placeholder="0" value="${remaining}" style="width:100%;"></td>
-        <td><input type="number" class="ing-price" placeholder="Narxi" value="${price}" style="width:100%;"></td>
-        <td style="text-align:center;"><button onclick="document.getElementById('${rowId}').remove()" style="background:none; border:none; color:#dc2626; cursor:pointer; font-size:16px;">🗑️</button></td>
-    `;
-    tbody.appendChild(tr);
-}
-
-// 2. Barcha qatorlarni aylanib chiqib, umumiy tushumni hisoblash funksiyasi
-function calcIngredients() {
-    const tbody = document.getElementById('ing-rows');
-    const rows = tbody.querySelectorAll('tr');
-    const resultBox = document.getElementById('ingredient-result-box');
-
-    if (rows.length === 0) {
-        alert("Sotilganni hisoblash uchun oldin xomashyo qo'shing!");
+    // Baza bo'm-bo'sh bo'lsa, standart 4 tasini Firebase'ga yozadi
+    if (Object.keys(localIngredients).length === 0) {
+        initDefaultIngredientsToFirebase();
         return;
     }
 
+    for (let id in localIngredients) {
+        const ing = localIngredients[id];
+        const tr = document.createElement('tr');
+        tr.id = `ing-row-${id}`;
+
+        tr.innerHTML = `
+            <td><b>${ing.name}</b></td>
+            <td style="text-align: center; color: #2563eb; font-weight: bold; font-size:15px;">${ing.stock}</td>
+            <td><input type="number" class="ing-in-add" data-id="${id}" placeholder="0" style="border-color: #f59e0b;"></td>
+            <td><input type="number" class="ing-out-remain" data-id="${id}" placeholder="Qoldi"></td>
+            <td><input type="number" class="ing-price-edit" data-id="${id}" value="${ing.price}"></td>
+            <td style="text-align:center;">
+                <button onclick="deleteIngredientType('${id}', '${ing.name}')" style="background:none; border:none; color:#dc2626; cursor:pointer; font-size:16px;">🗑️</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    }
+}
+
+// 3. Yangi yuk kelganda ombordagi songa qo'shish (Zaxira + Yangi)
+function saveIncomingIngredients() {
+    const inputs = document.querySelectorAll('.ing-in-add');
+    let updates = {};
+    let addedCount = 0;
+
+    inputs.forEach(input => {
+        const id = input.getAttribute('data-id');
+        const addValue = parseFloat(input.value) || 0;
+        
+        if (addValue > 0) {
+            updates[`ingredients/${id}/stock`] = localIngredients[id].stock + addValue;
+            addedCount++;
+        }
+
+        const priceInput = document.querySelector(`.ing-price-edit[data-id="${id}"]`);
+        if (priceInput) {
+            updates[`ingredients/${id}/price`] = parseFloat(priceInput.value) || 0;
+        }
+    });
+
+    if (addedCount === 0) {
+        alert("Omborga qo'shish uchun kamida bitta xomashyoning 'Yangi keldi (Kirim +)' ustuniga miqdor kiriting!");
+        return;
+    }
+
+    database.ref().update(updates).then(() => {
+        alert("Yangi kelgan mahsulotlar ombor zaxirasiga qo'shildi! 📥");
+        inputs.forEach(input => input.value = "");
+    }).catch(err => alert("Xato: " + err.message));
+}
+
+// 4. Kun oxirida sotilganini hisoblash ((Ombor - Qoldi) * Narx)
+function calcIngredients() {
+    const remainInputs = document.querySelectorAll('.ing-out-remain');
+    const resultBox = document.getElementById('ingredient-result-box');
+
     let totalRevenue = 0;
-    let detailHTML = `<h4 style="margin: 0 0 10px 0; color: #166534;">📊 Dinamik hisob-kitob natijasi:</h4>`;
+    let detailHTML = `<h4 style="margin: 0 0 10px 0; color: #166534;">📊 Kunlik hisob-kitob natijasi:</h4>`;
     let hasValidData = false;
+    calculatedStockUpdates = {}; 
 
-    rows.forEach(row => {
-        const name = row.querySelector('.ing-name').value.trim() || "Noma'lum xomashyo";
-        const incoming = parseFloat(row.querySelector('.ing-in').value) || 0;
-        const remaining = parseFloat(row.querySelector('.ing-out').value) || 0;
-        const price = parseFloat(row.querySelector('.ing-price').value) || 0;
+    remainInputs.forEach(input => {
+        const id = input.getAttribute('data-id');
+        const remainValueStr = input.value.trim();
+        
+        if (remainValueStr !== "") {
+            const remainValue = parseFloat(remainValueStr) || 0;
+            const currentStock = localIngredients[id].stock;
+            
+            const priceInput = document.querySelector(`.ing-price-edit[data-id="${id}"]`);
+            const price = priceInput ? (parseFloat(priceInput.value) || 0) : localIngredients[id].price;
 
-        // Sotilgan miqdor = Kelgan - Qoldi (0 dan kichik bo'lib ketmasligi ta'minlanadi)
-        let sold = Math.max(0, incoming - remaining);
-        let rowRevenue = sold * price;
+            let sold = currentStock - remainValue;
+            if (sold < 0) sold = 0; 
 
-        if (incoming > 0) {
+            let rowRevenue = sold * price;
             hasValidData = true;
             totalRevenue += rowRevenue;
+
+            calculatedStockUpdates[`ingredients/${id}/stock`] = remainValue;
+
             detailHTML += `
                 <div style="font-size: 14px; margin-bottom: 6px; color: #374151;">
-                    📦 <b>${name}:</b> ${sold} ta sotilgan ➔ <span style="color:#166534; font-weight:bold;">+${rowRevenue.toLocaleString()} so'm</span>
+                    📦 <b>${localIngredients[id].name}:</b> ${sold} ta ishlatildi (omborda ${remainValue} ta qoldi) ➔ <span style="color:#166534; font-weight:bold;">+${rowRevenue.toLocaleString()} so'm</span>
                 </div>
             `;
         }
     });
 
     if (!hasValidData) {
-        alert("Kamida bitta xomashyoning 'Kelgan' miqdorini kiriting!");
+        alert("Hisoblash uchun kamida bitta xomashyoning 'Kun oxiri (Qoldi)' miqdorini kiriting!");
         return;
     }
 
@@ -592,10 +562,10 @@ function calcIngredients() {
             💰 Jami tiklanadigan tushum: <span style="color: #b91c1c;">${calculatedEmergencyRevenue.toLocaleString()} so'm</span>
         </div>
         ${calculatedEmergencyRevenue > 0 ? `
-            <button class="btn-success" onclick="saveEmergencyRevenueToFirebase()" style="width: 100%; padding: 10px; font-weight: bold;">
-                📥 Ushbu pulni Bugungi Savdoga qo'shish
+            <button class="btn-success" onclick="saveEmergencyRevenueToFirebase()" style="width: 100%; padding: 10px; font-weight: bold; cursor:pointer;">
+                📥 Ushbu pulni Bugungi Savdoga qo'shish va Omborni Yangilash
             </button>
-        ` : '<p style="color:#64748b; font-size:12px; margin:0;">Sotuv tushumi 0 so\'m deb hisoblandi.</p>'}
+        ` : '<p style="color:#64748b; font-size:12px; margin:0;">Sotuv aniqlanmadi.</p>'}
     `;
 
     resultBox.innerHTML = detailHTML;
@@ -603,41 +573,94 @@ function calcIngredients() {
     resultBox.style.display = 'block';
 }
 
-// 3. Hisoblangan pulni Firebase bazasiga yozish va jadvalni tozalash
+// 5. Hisoblangan pulni savdoga urish va omborni yangi qoldiqqa tenglash
 function saveEmergencyRevenueToFirebase() {
     if (calculatedEmergencyRevenue <= 0) return;
 
-    if (confirm(`Rostdan ham ${calculatedEmergencyRevenue.toLocaleString()} so'm pulni bugungi umumiy savdoga qo'shmoqchimisiz?`)) {
+    if (confirm(`Rostdan ham ${calculatedEmergencyRevenue.toLocaleString()} so'm pulni bugungi savdoga qo'shib, ombor qoldiqlarini yangilamoqchimisiz?`)) {
+        
         let saleData = {
             time: new Date().toISOString(),
-            items: [{ name: "Xomashyo balansi orqali tiklangan dinamik savdo", price: calculatedEmergencyRevenue }],
+            items: [{ name: "Xomashyo balansi orqali tiklangan tushum", price: calculatedEmergencyRevenue }],
             total: calculatedEmergencyRevenue,
             tableName: "Xomashyo hisobi", 
             paymentMethod: "naqd"
         };
 
         database.ref('sales').push(saleData).then(() => {
-            alert("Pul muvaffaqiyatli qo'shildi! ✅");
+            return database.ref().update(calculatedStockUpdates);
+        }).then(() => {
+            alert("Pul savdoga qo'shildi va ombor qoldiqlari muvaffaqiyatli yangilandi! ✅");
             document.getElementById('ingredient-result-box').style.display = 'none';
-            
-            // Inputlarni tozalaymiz
-            document.getElementById('ing-rows').innerHTML = "";
-            
-            // Standart qatorlarni qaytadan yaratish (ixtiyoriy)
-            initDefaultIngredients();
-
-            if (typeof showStats === "function") showStats('today');
+            document.querySelectorAll('.ing-out-remain').forEach(input => input.value = "");
+            showStats('today');
         }).catch(err => alert("Xato yuz berdi: " + err.message));
     }
 }
 
-// Dastur boshlanganda foydalanuvchiga qulay bo'lishi uchun standart 4 ta qatorni avtomat yaratish
-function initDefaultIngredients() {
-    addIngredientRow("🫓 Lavash xmiri", 0, 0, 32000);
-    addIngredientRow("🍞 Burger noni", 0, 0, 20000);
-    addIngredientRow("🌭 Hotdog noni", 0, 0, 15000);
-    addIngredientRow("🌭 Sasiska", 0, 0, 5000);
+// --- MODAL BILAN MUTLAQ YANGI XOMASHYO QO'SHISH ---
+function openNewIngredientModal() {
+    document.getElementById('new-ing-modal').style.display = 'flex';
+}
+function closeNewIngredientModal() {
+    document.getElementById('new-ing-modal').style.display = 'none';
+    document.getElementById('new-ing-name').value = "";
+    document.getElementById('new-ing-stock').value = "";
+    document.getElementById('new-ing-price').value = "";
 }
 
-// Skript yuklanganda standart elementlarni chiqarish
-initDefaultIngredients();
+function createNewIngredientType() {
+    const name = document.getElementById('new-ing-name').value.trim();
+    const stock = parseFloat(document.getElementById('new-ing-stock').value) || 0;
+    const price = parseFloat(document.getElementById('new-ing-price').value) || 0;
+
+    if (!name) return alert("Xomashyo nomini kiriting!");
+
+    const newIng = { name: name, stock: stock, price: price };
+
+    database.ref('ingredients').push(newIng).then(() => {
+        alert(`"${name}" muvaffaqiyatli saqlandi!`);
+        closeNewIngredientModal();
+    }).catch(err => alert("Xato: " + err.message));
+}
+
+// Xomashyo turini o'chirish (🗑️)
+function deleteIngredientType(id, name) {
+    if (confirm(`"${name}" xomashyo turini bazadan butunlay o'chirmoqchimisiz?`)) {
+        database.ref(`ingredients/${id}`).remove();
+    }
+}
+
+// Birinchi marta kirganda baza bo'sh bo'lsa standart 4 ta elementni kiritish
+function initDefaultIngredientsToFirebase() {
+    const defaults = {
+        "lavash_bread": { name: "🫓 Lavash xmiri", stock: 0, price: 32000 },
+        "burger_bread": { name: "🍞 Burger noni", stock: 0, price: 20000 },
+        "hotdog_bread": { name: "🌭 Hotdog noni", stock: 0, price: 15000 },
+        "sasiska": { name: "🌭 Sasiska", stock: 0, price: 5000 }
+    };
+    database.ref('ingredients').set(defaults);
+}
+
+// Boshlang'ich yuklash funksiyalari
+renderCategories();
+renderMenu("all");
+listenIngredients(); // Ombor ma'lumotlarini real-time eshitishni boshlash
+// Yo'riqnoma oynasini ochish va yopish funksiyasi
+function toggleHelpModal() {
+    const helpBox = document.getElementById('help-content-box');
+    if (helpBox) {
+        helpBox.classList.toggle('hidden');
+    }
+}
+// Yo'riqnoma modal oynasini ochish va yopish funksiyasi
+function toggleHelpModal() {
+    const helpModal = document.getElementById('help-content-modal');
+    if (helpModal) {
+        if (helpModal.style.display === 'none' || helpModal.style.display === '') {
+            helpModal.style.display = 'flex';
+        } else {
+            helpModal.style.display = 'none';
+        }
+    }
+}

@@ -217,7 +217,7 @@ button:hover { filter: brightness(1.1); transform: translateY(-1px); }
 .hint { font-size: 12px; color: #64748b; margin: 8px 0 0; }
 
 /* Admin panel va xomashyo boshqaruvi */
-.admin { margin-top: 24px; border-top: 1px solid #1e2533; padding-top: 20px; }
+.admin { margin-top: 24px; border-top: 1px solid #1e2533; padding-top: 20px;}
 .hidden { display: none; }
 #admin-data { margin-top: 14px; }
 .filters { display: flex; gap: 6px; margin: 12px 0; flex-wrap: wrap; }

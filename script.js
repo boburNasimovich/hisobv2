@@ -298,10 +298,10 @@ function renderStatsUI(filteredSales, filteredExpenses, filter, showAll) {
 
     // 1. Qisqa hisobot bloki
     let output = `
-        <div style="background: #f8f9fa; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #eee;">
+        <div style="background: #2d3748; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #252e42;">
             <div style="font-size: 11px; color: #888; margin-bottom: 10px; text-align: center; font-weight:bold;">${currentFilterName} QISQA HISOBOT</div>
             <div style="display:flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #444;">💵 Naqd pul:</span>
+                <span style="color: #009266ff;">💵 Naqd pul:</span>
                 <b>${totalCash.toLocaleString()} so'm</b>
             </div>
             <div style="display:flex; justify-content: space-between; margin-bottom: 8px;">

@@ -523,7 +523,6 @@ function saveEmergencyRevenueToFirebase() {
 // Boshlang'ich yuklash
 renderCategories();
 renderMenu("all");
-// Global o'zgaruvchi - jami hisoblangan summani saqlash uchun
 
 // 1. Sahifa yuklanganda yoki har safar tugma bosilganda yangi qator qo'shish funksiyasi
 function addIngredientRow(name = "", incoming = 0, remaining = 0, price = 0) {
